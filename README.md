@@ -28,6 +28,7 @@
 7. [System Architecture](#7-system-architecture)
 8. [Engineering Specifications](#8-engineering-specifications)
 9. [Component & Power Distribution Table](#9-component--power-distribution-table)
+9.1. [Detailed Component Guide](#91-detailed-component-guide)
 10. [Vehicle Photos](#10-vehicle-photos)
 11. [Performance & Testing](#11-performance--testing)
 12. [Video Demonstrations](#12-video-demonstrations)
@@ -245,6 +246,191 @@ See the full [Component & Power Distribution Table](#9-component--power-distribu
 *All power rails are defined in [`docs/power/POWER_DISTRIBUTION.md`](docs/power/POWER_DISTRIBUTION.md); pin connections are in [`docs/wiring/WIRING.md`](docs/wiring/WIRING.md).*
 
 <!-- Replace the # placeholder datasheet links with real manufacturer PDF URLs. -->
+
+---
+
+## 9.1 Detailed Component Guide
+
+This section explains, in plain language, what each major component is, why our team chose it, and exactly how it is used on the vehicle. A photo placeholder is included under every component — send over each component's photo and it will be dropped into the matching spot at `docs/components/images/<component_name>.jpg`.
+
+---
+
+### 🖥️ Raspberry Pi 4 Model B — "The Brain"
+
+**What it is:** A full single-board computer (like a tiny PC) that runs a real operating system (Raspberry Pi OS/Linux). It has a quad-core processor, RAM, USB ports, HDMI, GPIO pins, and built-in Wi-Fi/Bluetooth.
+
+**Why we chose it:** The Obstacle Challenge requires interpreting a live camera feed to tell red pillars from green pillars and to spot the magenta parking marker — this is real-time image processing (OpenCV), which needs a proper CPU and enough RAM to run smoothly. A simple microcontroller can't do this on its own.
+
+**What it does on our robot:**
+- Runs the OpenCV vision pipeline that reads frames from the Pi Camera and classifies obstacles by color.
+- Reads the three ToF distance sensors and the MPU6050 IMU over I²C to build a picture of the car's surroundings and orientation.
+- Makes the "high-level" driving decisions (e.g., *"turn left, pillar is green"*) and sends them down to the ESP32-S3 over a USB-serial link.
+
+**Key specs:** Quad-core Broadcom SoC, GPIO header for I²C/UART, multiple USB ports for the camera and serial link to the ESP32-S3, 5V power input.
+
+<!-- Add photo: docs/components/images/raspberry_pi_4b.jpg -->
+![Raspberry Pi 4 Model B](docs/components/images/raspberry_pi_4b.jpg)
+
+---
+
+### ⚡ ESP32-S3 — "The Reflexes"
+
+**What it is:** A small, low-cost microcontroller board (not a full computer) with built-in Wi-Fi/Bluetooth, lots of GPIO pins, and hardware PWM channels. It runs one dedicated program in a tight, predictable loop instead of a full operating system.
+
+**Why we chose it:** Microcontrollers respond at a fixed, guaranteed speed every single time — unlike a computer, which can occasionally get "busy" processing a camera frame and briefly delay everything else. We wanted the actual steering and motor commands to never be late, so we split the work: the Pi *thinks*, the ESP32-S3 *reacts*.
+
+**What it does on our robot:**
+- Receives a small 10-byte data packet from the Raspberry Pi 100 times every second (100 Hz) over USB serial.
+- Converts those high-level commands into precise PWM signals for the steering servo and the drive motor driver.
+- Keeps the control loop running at a fixed rate regardless of what the Pi is doing.
+
+**Key specs:** Dual-core, multiple hardware PWM outputs (used for the 50 Hz servo signal and motor PWM), UART for talking to the Pi.
+
+<!-- Add photo: docs/components/images/esp32_s3.jpg -->
+![ESP32-S3](docs/components/images/esp32_s3.jpg)
+
+---
+
+### 🔌 L298N Dual H-Bridge Motor Driver
+
+**What it is:** A small driver board built around two "H-bridge" circuits. A microcontroller's GPIO pins can't supply enough current to spin a motor directly — the L298N sits in between, taking a low-power signal in and switching high-power motor current out.
+
+**Why we chose it:** It's a simple, reliable, widely-available way to control both the **speed** and the **direction** of a DC motor from just three digital/PWM pins, and it can handle the voltage/current our drive motor and battery need.
+
+**What it does on our robot:**
+- `ENA` pin receives a PWM signal from the ESP32-S3 to control motor **speed**.
+- `IN1` / `IN2` pins receive digital signals from the ESP32-S3 to control motor **direction** (forward/reverse).
+- Sits directly on the 11.1 V motor power rail, between the LiPo battery and the drive motor.
+
+**Key specs:** Dual H-bridge (only one channel used here), logic-level inputs compatible with 3.3 V microcontroller GPIO, handles the motor's operating voltage/current directly from the battery.
+
+<!-- Add photo: docs/components/images/l298n.jpg -->
+![L298N Motor Driver](docs/components/images/l298n.jpg)
+
+---
+
+### 🎯 MG995 Servo Motor — Steering Actuator
+
+**What it is:** A standard hobby servo motor: a small DC motor plus a gearbox and a built-in feedback circuit, packaged so that it holds a precise rotation angle in response to a PWM signal, rather than spinning continuously like a normal motor.
+
+**Why we chose it:** It has enough torque to move the 4-wheel steering linkage on both axles simultaneously, and standard hobby servos are simple to control with a single PWM signal — no extra driver circuitry required.
+
+**What it does on our robot:**
+- Physically turns the steering linkage that moves both the front and rear wheel sets (the 4WS/Ackermann geometry described in [Section 4](#4-mobility-management--mechanical-design)).
+- Receives a 50 Hz PWM signal directly from the ESP32-S3 (GPIO 18); the pulse width tells the servo exactly what angle to hold.
+- Achieves the measured 35°–40° steering range at the wheel.
+
+**Key specs:** Standard 3-wire hobby servo (power, ground, signal), 50 Hz PWM control, geared for torque over speed.
+
+<!-- Add photo: docs/components/images/mg995.jpg -->
+![MG995 Servo](docs/components/images/mg995.jpg)
+
+---
+
+### 🧭 MPU6050 — 6-DoF IMU (Inertial Measurement Unit)
+
+**What it is:** A tiny chip combining a 3-axis accelerometer (senses acceleration/tilt) and a 3-axis gyroscope (senses rotation rate) — "6 degrees of freedom" refers to these six measured axes together.
+
+**Why we chose it:** Cameras and distance sensors alone can lose track of exactly how much the car has turned, especially between camera frames. The IMU gives fast, continuous rotation data that lets the software correct small heading drift and execute clean, repeatable turns.
+
+**What it does on our robot:**
+- Connects to the Raspberry Pi over I²C (address `0x68`).
+- Supplies yaw-rate (turning speed) data that the software uses to correct heading between vision updates, so the car drives straighter and turns more consistently.
+
+**Key specs:** I²C interface, 3-axis accelerometer + 3-axis gyroscope in one chip, powered from the Pi's 3.3 V rail.
+
+<!-- Add photo: docs/components/images/mpu6050.jpg -->
+![MPU6050 IMU](docs/components/images/mpu6050.jpg)
+
+---
+
+### 📏 VL53L0X — Time-of-Flight Distance Sensor (Left & Right)
+
+**What it is:** A laser-ranging sensor that measures distance by timing how long it takes an invisible laser pulse to bounce off a surface and return — this is why it's called "Time-of-Flight" (ToF). It's far more accurate and consistent than older ultrasonic or infrared distance sensors.
+
+**Why we chose it:** We needed a compact, accurate, digital distance sensor that could reliably measure how far the car is from the walls on each side, without being affected by ambient light or surface color the way infrared sensors can be.
+
+**What it does on our robot:**
+- One unit mounted on the **left** side (I²C address `0x31`), one on the **right** side (I²C address `0x32`).
+- Continuously measures the gap to the nearest wall so the software can keep the car centered in its lane (wall-following).
+- Each sensor's `XSHUT` pin is wired to a separate GPIO (17 and 27) so the two identical sensors can be given different I²C addresses at startup — otherwise they'd conflict on the same bus.
+
+**Key specs:** I²C interface, shorter reliable range than the VL53L1X, small form factor for side-mounting.
+
+<!-- Add photo: docs/components/images/vl53l0x.jpg -->
+![VL53L0X ToF Sensor](docs/components/images/vl53l0x.jpg)
+
+---
+
+### 📡 VL53L1X — Time-of-Flight Distance Sensor (Front, Long Range)
+
+**What it is:** The longer-range sibling of the VL53L0X, using the same laser Time-of-Flight principle but able to measure much greater distances accurately.
+
+**Why we chose it:** The front sensor needs to "see" obstacles and corners much further ahead than the side sensors do, so the car has enough time to react — the extra range of the VL53L1X makes it the right fit for this forward-facing role.
+
+**What it does on our robot:**
+- Mounted facing forward, I²C address `0x30`, `XSHUT` on GPIO 22.
+- Detects upcoming walls/corners early, triggering the car's turning/obstacle-response logic in good time.
+
+**Key specs:** I²C interface, longer maximum range than the VL53L0X, same small laser-ToF package style.
+
+<!-- Add photo: docs/components/images/vl53l1x.jpg -->
+![VL53L1X ToF Sensor](docs/components/images/vl53l1x.jpg)
+
+---
+
+### 🏎️ Drive Motor — Johnson-Type Geared DC Motor (300 RPM)
+
+**What it is:** A brushed DC motor with a built-in gearbox that trades raw motor speed for usable torque at the output shaft — "300 RPM" refers to the geared output speed, not the bare motor speed.
+
+**Why we chose it:** 300 RPM was selected as the balance point between top speed (so the car isn't sluggish on the straights) and torque (so it can accelerate and correct heading quickly on a compact 4WS chassis) — see the justification in [Section 8](#8-engineering-specifications).
+
+**What it does on our robot:**
+- Provides forward/reverse propulsion, controlled entirely through the L298N driver.
+- Speed is set by the PWM duty cycle on `ENA`; direction is set by `IN1`/`IN2`.
+
+**Key specs:** Brushed DC motor with integrated gearbox, 300 RPM geared output, driven via H-bridge (not directly from the microcontroller).
+
+<!-- Add photo: docs/components/images/drive_motor.jpg -->
+![Drive Motor](docs/components/images/drive_motor.jpg)
+
+---
+
+### 🔋 LiPo 3S Battery (11.1 V) — Power Source
+
+**What it is:** A rechargeable Lithium-Polymer battery pack with 3 cells in series ("3S"), giving a nominal voltage of 11.1 V. LiPo packs are popular in robotics/RC because they store a lot of energy for their weight and can supply high current bursts.
+
+**Why we chose it:** The drive motor and steering servo need more current and a higher, steadier voltage than the Raspberry Pi's USB power can provide, so a dedicated LiPo pack powers the motor/servo rail while the Pi is powered separately.
+
+**What it does on our robot:**
+- Supplies the 11.1 V motor rail that feeds the L298N driver (and, through it, the drive motor).
+- Connects via an XT60 connector, a common high-current connector standard in robotics/RC.
+
+**Key specs:** 3S (11.1 V nominal) LiPo chemistry, XT60 connector, sized to power the motor and servo rails for a full run — see the full rail breakdown in [`docs/power/POWER_DISTRIBUTION.md`](docs/power/POWER_DISTRIBUTION.md).
+
+<!-- Add photo: docs/components/images/lipo_battery.jpg -->
+![LiPo 3S Battery](docs/components/images/lipo_battery.jpg)
+
+---
+
+### 📷 Pi Camera v2 — Vision Sensor
+
+**What it is:** A small camera module designed specifically to plug into the Raspberry Pi's dedicated CSI camera port (not a USB webcam), giving low-latency access to the video feed.
+
+**Why we chose it:** It integrates natively with the Raspberry Pi and OpenCV, giving a reliable, low-latency video feed for the color-detection pipeline without needing extra USB bandwidth.
+
+**What it does on our robot:**
+- Streams live video frames to the Raspberry Pi.
+- Feeds the OpenCV pipeline that performs HSV-based color detection to identify red/green pillars and the magenta parking-block marker.
+
+**Key specs:** CSI camera interface (direct ribbon-cable connection to the Pi), fixed-focus lens, used purely for color/shape detection rather than high-resolution photography.
+
+<!-- Add photo: docs/components/images/pi_camera_v2.jpg -->
+![Pi Camera v2](docs/components/images/pi_camera_v2.jpg)
+
+---
+
+> 📝 **Note for the team:** Send each component photo one at a time (or all together) and they'll be placed at the `docs/components/images/<name>.jpg` paths referenced above so the images render directly in this README.
 
 ---
 
