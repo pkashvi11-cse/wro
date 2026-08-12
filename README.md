@@ -1,3 +1,4 @@
+
 <div align="center">
 
 <img src="./assets/logo.jpeg" alt="Byte Riders Logo" width="260"/>
@@ -46,8 +47,8 @@ Byte Riders is a two-member engineering team built around a clean split between 
 
 | Photo | Name | Role | Responsibilities |
 |---|---|---|---|
-| <img src="./t-photos/shrut_barasara.jpg" alt="Shrut Barasara" width="130"/> | **Shrut Barasara** | Mechanical & Hardware Lead | Chassis design, 4-wheel steering geometry, sensor mounting, wiring, power distribution |
-| <img src="./t-photos/happy_patel.jpg" alt="Happy Patel" width="130"/> | **Happy Patel** | Software & Version Control Engineer | Embedded firmware (ESP32-S3), vision pipeline (OpenCV), Git/GitHub workflow, repository management |
+| <img width="2854" height="3706" alt="shrut" src="https://github.com/user-attachments/assets/d21bec4c-5d1e-41b7-9e72-61128f5b7a66" /> | **Shrut Barasara** | Mechanical & Hardware Lead | Chassis design, 4-wheel steering geometry, sensor mounting, wiring, power distribution |
+| <img width="960" height="1280" alt="happy" src="https://github.com/user-attachments/assets/01f8d001-fef8-4bf8-8a35-8ab29fd71b7d" /> | **Happy Patel** | Software & Version Control Engineer | Embedded firmware (ESP32-S3), vision pipeline (OpenCV), Git/GitHub workflow, repository management |
 | <!-- photo: t-photos/brijesh_kundaliya.jpg --> | **Brijesh Kundaliya** | Coach | Technical mentorship, engineering review, and competition-readiness guidance |
 
 <!-- Contestant photos are loaded from t-photos/. Commit the two image files with these exact
@@ -60,7 +61,7 @@ Byte Riders is a two-member engineering team built around a clean split between 
 
 | Shrut Barasara | Happy Patel |
 |:---:|:---:|
-| <img src="shrut.jpg" alt="Shrut Barasara — Mechanical & Hardware Lead" width="300"/> | <img src="happy.jpg" alt="Happy Patel — Software & Version Control Engineer" width="300"/> |
+| <img width="960" height="1280" alt="Shrut Barasara" src="https://github.com/user-attachments/assets/d21bec4c-5d1e-41b7-9e72-61128f5b7a66"/> | <img width="960" height="1280" alt="Happy Patel" src="https://github.com/user-attachments/assets/01f8d001-fef8-4bf8-8a35-8ab29fd71b7d" /> |
 | *Mechanical & Hardware Lead* | *Software & Version Control Engineer* |
 
 </div>
