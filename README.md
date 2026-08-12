@@ -60,7 +60,7 @@ Byte Riders is a two-member engineering team built around a clean split between 
 
 | Shrut Barasara | Happy Patel |
 |:---:|:---:|
-| <img src="./t-photos/shrut_barasara.jpg" alt="Shrut Barasara — Mechanical & Hardware Lead" width="300"/> | <img src="./t-photos/happy_patel.jpg" alt="Happy Patel — Software & Version Control Engineer" width="300"/> |
+| <img src="shrut.jpg" alt="Shrut Barasara — Mechanical & Hardware Lead" width="300"/> | <img src="happy.jpg" alt="Happy Patel — Software & Version Control Engineer" width="300"/> |
 | *Mechanical & Hardware Lead* | *Software & Version Control Engineer* |
 
 </div>
